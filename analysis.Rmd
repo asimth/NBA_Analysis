@@ -1,0 +1,1160 @@
+---
+title: "NBA analysis"
+author: "Asim Mohammed"
+date: "26/04/2023"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+## 1. Introduction
+
+Basketball is a sport that has gained significant popularity around the world, and the National Basketball Association (NBA) is one of the most prominent professional basketball leagues in the world. In basketball, each team is made up of five players who are assigned to different positions, namely point guard, shooting guard, small forward, power forward, and center. 
+
+The Chicago Bulls is one of the NBA teams that have been struggling in recent seasons, with the team placing 27th out of 30 in the most recent season (2018-19). The team's budget for player contracts in the upcoming season (2019-20) is also limited, ranked 26th out of 30 teams. As a result, there is a need to optimize player selection to improve the team's performance while also managing costs.
+
+The aim of this project is to identify the best five starting players for the Chicago Bulls for the upcoming 2019-20 NBA season while staying within the team's budget of $118 million. To achieve this aim, we will perform a data analysis project that involves identifying the key performance metrics for each basketball position, evaluating the players on the Chicago Bulls team, and analyzing potential external candidates that the team can afford.
+
+This project is important because it can help the Chicago Bulls improve their performance in the upcoming season while also managing costs. By identifying the best starting players for the team, we can maximize the team's chances of winning games and potentially making it to the playoffs. Additionally, this project can serve as a template for other NBA teams looking to optimize their player selection while managing costs.
+
+
+## 2. Reading and cleaning the raw data
+
+We first load the the necessary libraries.
+
+```{r, warning=FALSE}
+
+# loading necessary libraries
+suppressPackageStartupMessages(library(tidyverse)) 
+suppressPackageStartupMessages(library(ggplot2)) 
+suppressPackageStartupMessages(library(ggpubr)) 
+suppressPackageStartupMessages(library(reshape2)) 
+```
+
+Read the data:
+
+```{r}
+# load data
+player_salary <- read.csv('C:/Users/HP/Desktop/sports/2018-19_nba_player-salaries.csv')   # player salary data
+player_stats <- read.csv('C:/Users/HP/Desktop/sports/2018-19_nba_player-statistics.csv')  # player statistics data
+team_stats_1 <- read.csv('C:/Users/HP/Desktop/sports/2018-19_nba_team-statistics_1.csv') # team statistics data 1
+team_stats_2 <- read.csv('C:/Users/HP/Desktop/sports/2018-19_nba_team-statistics_2.csv') # team statistics data 2
+team_payroll <- read.csv('C:/Users/HP/Desktop/sports2019-20_nba_team-payroll.csv') # team payroll data
+
+```
+
+A brief description of each data set and the variables in it, with a link to the full variable descriptions:
+
+1. **2018-19_nba_player-salaries** : This data set contains information about the salaries of NBa players for the session 2018-19 in millions (USD). There are three variables in the data namely, player_id, player_name and salary. The terms are self explanatory.
+
+This data is sourced from: hoopshype.com/salaries (https://hoopshype.com/salaries/)
+
+2. **2018-19_nba_player-statistics.csv** : This data set contains total statistics for individual NBA players during the 2018-19 season. The dataset includes various variables such as player name, position, age, team, games played, games started, minutes played, field goal attempts and percentage, 3-point field goal attempts and percentage, 2-point field goal attempts and percentage, effective field goal percentage, free throw attempts and percentage, offensive and defensive rebounds, total rebounds, assists, steals, blocks, turnovers, personal fouls, and points. The dataset has a total of 708 entries, with one row for each player in the 2018-19 NBA season.
+
+This data is sourced from: basketball-reference.com (https://www.basketball-reference.com/leagues/NBA_2019_totals.html)
+
+3. **2018-19_nba_team-statistics_1.csv** : This data set provides miscellaneous statistics for NBA teams during the 2018-19 season. The dataset includes various variables such as team rank, mean age of players, total number of wins and losses, Pythagorean wins and losses, margin of victory, strength of schedule, simple rating system, offensive rating, defensive rating, net rating, pace factor, free throw attempt rate, 3-point attempt rate, true shooting percentage, effective field goal percentage, turnover percentage, offensive rebound percentage, free throws per field goal attempt, and defensive rebound percentage. 
+
+This data is sourced from: basketball-reference.com (https://www.basketball-
+reference.com/leagues/NBA_2019.html)
+
+4. **2018-19_nba_team-statistics_2.csv** : This data set is a complementary to the above data set which mentions addition statistics for NBA teams during the session 2018-19. The dataset includes data on team performance in both offensive and defensive categories, such as points scored, field goal percentage, rebounds, blocks, steals, and turnovers. Additionally, it includes more advanced statistics like true shooting percentage, player efficiency rating, and offensive and defensive ratings
+
+This data is sourced from:  basketball-reference.com (https://www.basketball-
+reference.com/leagues/NBA_2019.html)
+
+5. **2019-20_nba_team-payroll.csv**: This data set contains the team payroll budget for each team in the NBA during the 2018-19 season. The variables in the data set include:
+-	team_id: a unique identification number for each team
+-	team: the name of the NBA team
+-	salary: the team payroll budget for the 2018-19 season, measured in US dollars
+
+This data is sourced from: hoopshype.com/salaries (https://hoopshype.com/salaries/)
+
+
+**NOTE:** To look at the data dictionary for tha above data sets please refer to this link: (https://uclearn.canberra.edu.au/courses/13262/pages/data-description-reproducible-data-analysis-project)
+
+
+## 3. Exploratory analysis
+
+In this section we will explore the data set closely and will perform necessary pre-processing along the way.
+
+### Handling missing values
+
+We will now check if there are any missing values in the data sets.
+
+```{r}
+
+# checking for missing values:
+
+print(paste0('player_salary : ', sum(is.na(player_salary))))
+print(paste0('team_payroll : ', sum(is.na(team_payroll))))
+print(paste0('player_stats : ', sum(is.na(player_stats))))
+print(paste0('team_stats_1 : ', sum(is.na(team_stats_1))))
+print(paste0('team_stats_2 : ', sum(is.na(team_stats_2))))
+
+```
+We see that the data sets player_stats have 117 missing values and team_stats_1 have 90 missing values. 
+Lets find out in which columns these missing values are present.
+
+```{r}
+
+# finding columns with missing values
+colSums(is.na(player_stats))
+
+```
+we observe that there are missing values in following columns of player_stats : FG., X3P., X2P., eFG., FT.
+
+```{r}
+
+colSums((is.na(team_stats_1)))
+
+```
+
+we observe that there are missing values in following columns of team_stats_1:  X, X.1, X.2. All these variables ar completely empty.
+
+We will now impute the missing values in the data set with the mean of respective columns
+
+```{r}
+
+# removing missing values with the mean of the respective column in player_stats
+player_stats$FG.[is.na(player_stats$FG.)] <- mean(player_stats$FG., na.rm = TRUE)
+player_stats$eFG.[is.na(player_stats$eFG.)] <- mean(player_stats$eFG., na.rm = TRUE)
+player_stats$FT.[is.na(player_stats$FT.)] <- mean(player_stats$FT., na.rm = TRUE)
+player_stats$X3P.[is.na(player_stats$X3P.)] <- mean(player_stats$X3P., na.rm = TRUE)
+player_stats$X2P.[is.na(player_stats$X2P.)] <- mean(player_stats$X2P., na.rm = TRUE)
+
+
+# dropping the missing values in team_stats_1 dataframe
+team_stats_1[,c('X', 'X.1', 'X.2')] <- NULL
+
+print(paste0('player_stats : ', sum(is.na(player_stats))))
+print(paste0('team_stats_1 : ', sum(is.na(team_stats_1))))
+
+```
+
+### Distribution of variables
+
+We will now look at the distributions of the features presented in dataframes: player_stats, team_stats_1 and team_stats_2. 
+
+
+We will define a function named 'distribution' to help in the process of plotting the graphs and reduce the line of codes.
+
+
+```{r}
+
+# function to create density plot for provided columns in dataframe
+distribution <- function(df, cols, ncol, nrow){
+  
+  df_stats <- melt(df[,cols], id.vars = 'index', variable.name = 'columns')
+  p3 <- ggplot(aes(x = value, group = columns), data=df_stats)
+  p3 + geom_density() + facet_wrap(~columns, ncol = ncol, nrow = nrow, scales = 'free')  + theme(axis.text.x = element_text(angle = 90))
+  
+}
+
+```
+
+*distribution of features in player statistics:*
+
+```{r}
+
+# add an index column to the dataframe
+player_stats['index'] <- rownames(player_stats)
+
+# plot the distribution of columns: 'Age', 'G', 'GS', 'MP', 'FG', 'FGA', 'FG.','X3P', 'X3PA', 'X3P.'
+distribution(player_stats,c('index','Age', 'G', 'GS', 'MP', 'FG', 'FGA', 'FG.','X3P', 'X3PA', 'X3P.'), 5, 2)
+
+```
+From the plot of distributions above we observe that:
+
+- Most players in the data set are fairly young ranging from 22 to 28 years of age approximately. There are very few players above the age of 30-35.
+
+- There are three groups of players: 
+  - players who played more than 60 games : These players have a high frequency in the data.
+  - players who played less than 30 games : These players have the second most high frequency.
+  - players who played 30-60 games.
+
+- Most of the players had field goals rate of approx 40% .
+
+- Most of the players had field goal rate on 3-Pt field goal attempts (X3P.) of approx 40%.
+
+```{r}
+
+distribution(player_stats, c('index','X2P', 'X2PA', 'X2P.', 'eFG.', 'FT', 'FTA', 'FT.','ORB', 'DRB', 'TRB'), 5, 2)
+
+```
+
+From the plot of distributions above we observe that:
+
+- Most of the players had effective field goals rate of approx 50% .
+
+- Most of the players had field goal rate on 2-Pt field goal attempts (X2P.) of approx 50%.
+
+- Most of the players had a free throw rate of approx 60-80%.
+
+- Most of the players had Total rebounds of less than 250.
+
+```{r}
+
+distribution(player_stats,c('index','AST', 'STL', 'BLK', 'TOV', 'PF', 'PTS'), 3, 2)
+
+```
+
+From the plot of distribution above we observe that:
+
+- Most of the players had an assist of less than 150.
+
+- Most of the players had steals of less than 50.
+
+- Most of the players had blocks of less than 25.
+
+- Most of the players had turnovers of less than 75.
+
+- most of the players had up to 150 personal fouls.
+
+
+*distribution of features in Team statistics 1*:
+
+```{r}
+
+team_stats_1['index'] <- rownames(team_stats_1)
+distribution(team_stats_1, c('index', 'Age', 'W', 'L', 'PW', 'PL', 'MOV', 'SOS', 'SRS', 'ORtg', 'DRtg'), 5, 2)
+
+```
+
+```{r}
+
+distribution(team_stats_1, c('index', 'NRtg', 'Pace', 'FTr', 'X3PAr', 'TS.', 'eFG.', 'TOV.', 'ORB.', 'FT.FGA', 'DRB.'), 5, 2)
+
+```
+
+distribution of features in team stats 2:
+
+```{r}
+
+team_stats_2['index'] <- rownames(team_stats_2)
+
+distribution(team_stats_2, c('index', 'MP', 'FG', 'FGA', 'FG.', 'X3P', 'X3PA', 'X3P.', 'X2P', 'X2PA', 'X2P.'), 5, 2)
+
+```
+
+```{r}
+
+distribution(team_stats_2, c('index', 'FT', 'FTA', 'FT.', 'ORB', 'DRB', 'TRB', 'AST', 'STL', 'BLK', 'TOV','PF', 'PTS'), 6, 2)
+
+```
+
+##Player wise analisys:
+
+In this section we will look at top and bottom 20 players based on various features in the player_stats dataframe.
+
+While performing this analysis we keep in mind that there are multiple rows for one player in the data set, hence we choose to group the data by player_name and summarize it by taking means of the feature of interest.
+
+For the analysis to be backed by enough data we will only consider those players who have player at least 40 games in the season.
+
+
+### Top and bottom 20 players based on Field Goal percentage:
+
+```{r}
+
+# multiplying by 100 to convert into more readable percentage form in the graphs
+player_stats['FG.'] <- player_stats['FG.'] * 100
+
+n = 20
+
+# top n
+
+p1.1 <- player_stats%>%filter( G >= 40)%>%group_by(player_name)%>%summarise(FG. = mean(FG.))%>%arrange(-FG.)%>%head(n)%>%ggplot(aes(reorder(player_name, FG.), FG., fill = FG.)) + 
+  geom_bar(stat="identity") + 
+  labs(x = 'player name', y = 'Field Goal (%)', title = 'Top 20 players based on Field goal %') + 
+  theme(plot.title = element_text(size = 10),legend.position = "none") +
+  geom_text(aes(player_name, FG.,label = round(FG.,2) ), size = 3, color = 'black', hjust = -0.1) + 
+  coord_flip()
+
+p1.1
+
+```
+The above graph represents the analysis of the top 20 players (who have played more than 40 games) based on their Field Goal percentages. Upon examining the graph, it can be observed that Mitchell Robinson and Ekpe Udoh have the highest field goal percentages of 69%, making them the top two players.
+
+
+```{r}
+
+# bottom n
+
+p1.2 <- player_stats%>%filter( G >= 40)%>%group_by(player_name)%>%summarise(FG. = mean(FG.))%>% arrange(-FG.)%>% tail(n)%>%ggplot(aes(reorder(player_name, FG.), FG., fill = FG.)) + geom_bar(stat="identity") +
+            labs(x = 'player name', y = 'Field Goal (%)', title = 'Bottom 20 players based on Field goal %') +
+            theme(plot.title = element_text(size = 10),legend.position = "none")+
+            scale_fill_gradient(low = '#CC0000', high= '#FFCCCC') +
+            geom_text(aes(player_name, FG.,label = round(FG.,2) ), size = 3, color = 'black', hjust = -0.1) +
+            coord_flip()
+
+p1.2
+
+
+```
+The above graph represents the analysis of the bottom 20 players (who have played more than 40 games) based on their Field Goal percentages. Upon examining the graph, it can be observed that Sviatoslav Mykhailiuk, Gary Clark and Frank Ntilikina are the lowest performing players.
+
+### Top and bottom 20 players based on FG% on 3-Pt FGAs
+
+```{r}
+
+# multiplying by 100 to convert into more readable percentage form in the graphs
+player_stats['X3P.'] <- player_stats$X3P. * 100
+
+
+# top n
+p2.1 <- player_stats%>%filter(G >= 40)%>%group_by(player_name)%>% summarise(X3P. = mean(X3P.))%>%arrange(-X3P.)%>%head(n)%>%
+            ggplot(aes(reorder(player_name, X3P.), X3P., fill = X3P.)) + geom_bar(stat="identity") +
+            labs( x = 'player name',y = 'FG% on 3-Pt FGAs', title = 'Top 20 players based on FG% on 3-Pt FGAs') +
+            theme(plot.title = element_text(size = 10),legend.position = "none") +
+            geom_text(aes(player_name, X3P.,label = round(X3P.,2) ), size = 3, color = 'black', hjust = -0.1) +
+            coord_flip()
+
+p2.1
+
+```
+
+The above graph shows the top 20 players based on their Field Goal percentage on 3-Point Field Goal Attempts. The top player is Domantas Sabonis with a rate of 52.9% followed by Willie Cauley-Stein with a rate of 50%.
+
+
+
+```{r}
+# bottom n
+
+p2.2 <- player_stats%>%filter(G >= 40)%>%group_by(player_name)%>% summarise(X3P. = mean(X3P.))%>%arrange(-X3P.)%>%tail(n)%>%
+            ggplot(aes(reorder(player_name, X3P.), X3P., fill = X3P.)) + geom_bar(stat="identity") +
+            labs(x = 'player name', y = 'FG% on 3-Pt FGAs', title = 'Bottom 20 players based on FG% on 3-Pt FGAs') +
+            theme(plot.title = element_text(size = 10),legend.position = "none") +
+            scale_fill_gradient(low = '#CC0000', high= '#FFCCCC') +
+            geom_text(aes(player_name, X3P.,label = round(X3P.,2) ), size = 3, color = 'black', hjust = -0.1) +
+            coord_flip()
+
+p2.2
+
+# display
+#ggarrange(p1.1, p1.2, row = 2)
+
+```
+The above plot shows that a no. of players have almost 0% X3P. We may say that Kylie O'Quinn and JaVale McGee are the lowest performers based on X3P.
+
+### Top and bottom 20 players based on FG% on 3-Pt FGAs
+
+```{r}
+
+# multiplying by 100 to convert into more readable percentage form in the graphs
+player_stats['X2P.'] <- player_stats$X2P. * 100
+
+
+# top n
+p3.1 <- player_stats%>%filter( G >= 40 )%>%group_by(player_name)%>% summarise(X2P. = mean(X2P.))%>%arrange(-X2P.)%>%head(n)%>%
+            ggplot( aes(reorder(player_name,X2P.), X2P., fill = X2P.)) + geom_bar(stat="identity") +
+            labs(x = 'player name', y = 'FG% on 2-Pt FGAs', title = 'Top 20 players based on FG% on 2-Pt FGAs') +
+            theme(plot.title = element_text(size = 10),legend.position = "none") +
+            geom_text(aes(player_name, X2P.,label = round(X2P.,2) ), size = 3, color = 'black', hjust = -0.1) +
+            coord_flip()
+
+p3.1
+
+```
+
+The above graph shows the top 20 players based on their Field Goal percentage on 2-Point Field Goal Attempts. The top player is Dwight Powell with a rate of 69.9% followed by Jonah Bolden with a rate of 69.7%.
+
+```{r}
+
+# bottom n
+
+p3.2 <- player_stats%>%filter( G >= 40)%>%group_by(player_name)%>% summarise(X2P. = mean(X2P.))%>%arrange(-X2P.)%>%tail(n)%>%
+            ggplot(aes(reorder(player_name,X2P.), X2P., fill = X2P.)) + geom_bar(stat="identity") +
+            labs(x = 'player name', y = 'FG% on 2-Pt FGAs', title = 'Bottom 20 players based on FG% on 2-Pt FGAs') +
+            theme(plot.title = element_text(size = 10),legend.position = "none") +
+            scale_fill_gradient(low = '#CC0000', high= '#FFCCCC') +
+            geom_text(aes(player_name, X2P.,label = round(X2P.,2) ), size = 3, color = 'black', hjust = -0.1) +
+            coord_flip()
+
+p3.2
+
+```
+
+The above graph shows the bottom 20 players based on their Field Goal percentage on 2-Point Field Goal Attempts. The bottom player is Sviatoslav MykhailiuK with a rate of 33.3% followed by Allen Crabbe with a rate of 34.2%.
+
+### Top and bottom 20 players based on Free Throw Percentage
+
+```{r}
+
+# multiplying by 100 to convert into more readable percentage form in the graphs
+player_stats['FT.'] <- player_stats$FT. * 100
+
+
+# top n
+p4.1 <- player_stats%>%filter( G >= 40)%>%group_by(player_name)%>% summarise(FT. = mean(FT.))%>%arrange(-FT.)%>%head(n)%>%
+            ggplot(aes(reorder(player_name, FT.), FT., fill = FT.)) + geom_bar(stat="identity") +
+            labs(x = 'player name', y = 'Free Throw % ', title = 'Top 20 players based on Free throw percentage') +
+            theme(plot.title = element_text(size = 10),legend.position = "none") +
+            geom_text(aes(player_name, FT.,label = round(FT.,2) ), size = 3, color = 'black', hjust = -0.1) +
+            coord_flip()
+
+p4.1
+
+```
+The above graph shows the top 20 players based on their free throw percentage. The top player is Gary Clark with a rate of 100% followed by Malcolm Brogdon with a rate of 92.8%.
+
+```{r}
+# bottom n
+
+p3.2 <- player_stats%>%filter(G >= 40)%>%group_by(player_name)%>% summarise(FT. = mean(FT.))%>%arrange(-FT.)%>%tail(n)%>%
+            ggplot(aes(reorder(player_name, FT.), FT., fill = FT.)) + geom_bar(stat="identity") +
+            labs(x = 'player name', y = 'Free Throw %', title = 'Bottom 20 players based on Free throw percentage') +
+            theme(plot.title = element_text(size = 10),legend.position = "none") +
+            scale_fill_gradient(low = '#CC0000', high= '#FFCCCC') +
+            geom_text(aes(player_name, FT.,label = round(FT.,2) ), size = 3, color = 'black', hjust = -0.1) +
+            coord_flip()
+
+p3.2
+
+```
+The above graph shows the bottom 20 players based on their free throw percentage. The bottom most players are Kosta Koufos and Lonzo Ball with a rate of 41.7%.
+
+### Top and bottom 20 players based on Effectice Field Goals
+
+```{r}
+
+# multiplying by 100 to convert into more readable percentage form in the graphs
+player_stats['eFG.'] <- player_stats$eFG. * 100
+
+# top n
+p5.1 <- player_stats%>%filter( G >= 40)%>%group_by(player_name)%>% summarise(eFG. = mean(eFG.))%>%arrange(-eFG.)%>%head(n)%>%
+            ggplot(aes(reorder(player_name,eFG.), eFG., fill = eFG.)) + geom_bar(stat="identity") +
+            labs( x = 'player name', y = 'effectice field goals % ', title = 'Top 20 players based on effectice field goals') +
+            theme(plot.title = element_text(size = 10),legend.position = "none") +
+            geom_text(aes(player_name, eFG.,label = round(eFG.,2) ), size = 3, color = 'black', hjust = -0.1) +
+            coord_flip()
+
+p5.1
+
+```
+The above plot shows the top 20 players based on Effective Field Goals, the highest performing player comes out to be Mitchell Robinson and Ekpe Udoh with a rate of 69.4%. They were the top performers based on field goals percentage as well.
+
+Effective Field Goals take into account the value of three-point shots, giving players who make more three-pointers a higher effective field goal percentage.
+
+```{r}
+
+# bottom n
+
+p5.2 <- player_stats%>%filter( G >= 40)%>%group_by(player_name)%>% summarise(eFG. = mean(eFG.))%>%arrange(-eFG.)%>%tail(n)%>%
+            ggplot(aes(reorder(player_name,eFG.), eFG., fill = eFG.)) + geom_bar(stat="identity") +
+            labs(x = 'player name', y = 'effectice field goals %', title = 'Bottom 20 players based on effectice field goals') +
+            theme(plot.title = element_text(size = 10),legend.position = "none") +
+            scale_fill_gradient(low = '#CC0000', high= '#FFCCCC') +
+            geom_text(aes(player_name, eFG.,label = round(eFG.,2) ), size = 3, color = 'black', hjust = -0.1) +
+            coord_flip()
+
+p5.2
+
+```
+The lowest performing player as per effective field goal is Sindarius Thornwell with a rate of37.8% followed by Frank Ntilikina 39.5%.
+
+### Top and bottom 20 players based on Total Rebounds
+
+```{r}
+
+
+# top n
+p6.1 <- player_stats%>%filter( G >= 40)%>%group_by(player_name)%>% summarise(TRB = mean(TRB/G))%>%arrange(-TRB)%>%head(n)%>%
+            ggplot(aes(reorder(player_name,TRB), TRB, fill = TRB)) + geom_bar(stat="identity") +
+            labs(x = 'player name', y = 'Total Rebounds', title = 'Top 20 players based on Total Rebounds') +
+            theme(plot.title = element_text(size = 10),legend.position = "none") +
+            geom_text(aes(player_name, TRB,label = round(TRB,2) ), size = 3, color = 'black', hjust = -0.1) +
+            coord_flip()
+
+p6.1
+
+```
+
+Above graphs shows top 20 players based on total rebounds. Andre Drummond stands out with the highest total rebounds of 15.5 followed by Joel Embiid with TRB of 13.61.
+
+```{r}
+
+# bottom n
+
+p6.2 <- player_stats%>%filter( G >= 40)%>%group_by(player_name)%>% summarise(TRB = mean(TRB/G))%>%arrange(-TRB)%>%tail(n)%>%
+            ggplot(aes(reorder(player_name,TRB), TRB, fill = TRB)) + geom_bar(stat="identity") +
+            labs(x = 'player name', y = 'Total Rebounds per game', title = 'Bottom 20 players based on Total Rebounds per game') + theme(plot.title = element_text(size = 10),legend.position = "none") +
+            scale_fill_gradient(low = '#CC0000', high= '#FFCCCC') +
+            geom_text(aes(player_name, TRB,label = round(TRB,2) ), size = 3, color = 'black', hjust = -0.1) +
+            coord_flip()
+
+p6.2
+
+
+```
+Based on the above graph we can say that Sindarius Thornwell had the least TRB of 0.69 followed by Sviatoslav Mykhailiuk with a TRB of 0.86.
+
+### Top and bottom 20 players based on Points per game
+
+```{r}
+
+n = 20
+
+# top n
+p7.1 <- player_stats%>%filter( G >= 40)%>%group_by(player_name)%>% summarise(PTS = mean(PTS/G))%>%arrange(-PTS)%>%head(n)%>%
+            ggplot(aes(reorder(player_name,PTS), PTS, fill = PTS)) + geom_bar(stat="identity") +
+            labs(x = 'player name', y = 'Points  per game', title = 'Top 20 players based on Points  per game') +
+            theme(plot.title = element_text(size = 10),legend.position = "none") +
+            geom_text(aes(player_name, PTS,label = round(PTS) ), size = 3, color = 'black', hjust = -0.1) +
+            coord_flip()
+
+p7.1
+
+```
+
+According to the plotted graph, the top 20 players based on points per game have been identified. James Harden has the highest points per game with a score of 36.
+
+```{r}
+
+# bottom n
+
+p7.2 <- player_stats%>%filter( G >= 40)%>%group_by(player_name)%>% summarise(PTS = mean(PTS/G))%>%arrange(-PTS)%>%tail(n)%>%
+            ggplot(aes(reorder(player_name, PTS), PTS, fill = PTS)) + geom_bar(stat="identity") +
+            labs(x = 'player name', y = 'Points per game', title = 'Bottom 20 players based on Points per game') +
+            theme(plot.title = element_text(size = 10),legend.position = "none") +
+            scale_fill_gradient(low = '#CC0000', high= '#FFCCCC') +
+            geom_text(aes(player_name, PTS,label = round(PTS) ), size = 3, color = 'black', hjust = -0.1) +
+            coord_flip()
+
+p7.2
+
+```
+
+Based on the above graph Sindarius Thornwell performed the lowest based on points per game.
+
+
+### Top and bottom 20 players based on Assists per game
+
+```{r}
+
+n = 20
+
+# top n
+p8.1 <- player_stats%>%filter( G >= 40)%>%group_by(player_name)%>% summarise(AST = mean(AST/G))%>%arrange(-AST)%>%head(n)%>%
+            ggplot(aes(reorder(player_name, AST), AST, fill = AST)) + geom_bar(stat="identity") +
+            labs(x = 'player name', y = 'Assists per game', title = 'Top 20 players based on Assists per game') +
+            theme(plot.title = element_text(size = 10),legend.position = "none") +
+            geom_text(aes(player_name, AST,label = round(AST,2) ), size = 3, color = 'black', hjust = 0) +
+            coord_flip()
+
+p8.1
+
+```
+
+According to the graph, the top 20 players based on assists per game are led by Russell Westbrook, who has the highest number of assists per game. 
+
+```{r}
+
+# bottom n
+
+p8.2 <- player_stats%>%filter( G >= 40)%>%group_by(player_name)%>% summarise(AST = mean(AST/G))%>%arrange(-AST)%>%tail(n)%>%
+            ggplot(aes(reorder(player_name, AST), AST, fill = AST)) + geom_bar(stat="identity") +
+            labs(x = 'player name', y = 'Assists per game', title = 'Bottom 20 players based on Assists per game') +
+            theme(plot.title = element_text(size = 10),legend.position = "none") +
+            scale_fill_gradient(low = '#CC0000', high= '#FFCCCC') +
+            geom_text(aes(player_name, AST,label = round(AST,2) ), size = 3, color = 'black', hjust = -0.1) +
+            coord_flip()
+
+p8.2
+
+
+```
+Based on the above graph Sindarius Thornwell performed the lowest based on assists per game.
+
+### Top and bottom 20 players based on Steals per game
+
+```{r}
+
+n = 20
+
+# top n
+p9.1 <- player_stats%>%filter( G >= 40 )%>%group_by(player_name)%>% summarise(STL = mean(STL/G))%>%arrange(-STL)%>%head(n)%>%
+            ggplot(aes(reorder(player_name, STL), STL, fill = STL)) + geom_bar(stat="identity") +
+            labs(x = 'player name', y = 'Steals per game', title = 'Top 20 players based on Steals per game') +
+            theme(plot.title = element_text(size = 10),legend.position = "none") +
+            geom_text(aes(player_name, STL,label = round(STL,2) ), size = 3, color = 'black', hjust = -0.1) +
+            coord_flip()
+
+p9.1
+
+```
+According to the below graph, Paul George has the highest number of steals per game among all players.
+
+
+```{r}
+
+# bottom n
+
+p9.2 <- player_stats%>%filter( G >= 40)%>%group_by(player_name)%>% summarise(STL = mean(STL/G))%>%arrange(-STL)%>%tail(n)%>%
+            ggplot(aes(reorder(player_name,STL), STL, fill = STL)) + geom_bar(stat="identity") +
+            labs(x = 'player name', y = 'Steals per game', title = 'Bottom 20 players based on Steals per game') +
+            theme(plot.title = element_text(size = 10),legend.position = "none") +
+            scale_fill_gradient(low = '#CC0000', high= '#FFCCCC') +
+            geom_text(aes(player_name, STL,label = round(STL,2) ), size = 3, color = 'black', hjust = -0.1) +
+            coord_flip()
+
+p9.2
+
+```
+Based on the above graph Jarell Martin performed the lowest based on steals per game.
+
+### Top and bottom 20 players based on Blocks per game
+
+```{r}
+
+n = 20
+
+# top n
+p10.1 <- player_stats%>%filter( G >= 40)%>%group_by(player_name)%>% summarise(BLK = mean(BLK/G))%>%arrange(-BLK)%>%head(n)%>%
+            ggplot(aes(reorder(player_name,BLK), BLK, fill = BLK)) + geom_bar(stat="identity") +
+            labs(x = 'player name', y = 'Blocks per game', title = 'Top 20 players based on Blocks per game') +
+            theme(plot.title = element_text(size = 10),legend.position = "none") +
+            geom_text(aes(player_name, BLK,label = round(BLK,2) ), size = 3, color = 'black', hjust = -0.1) +
+            coord_flip()
+
+p10.1
+```
+Above graph shows top 20 players based on Blocks per game and they are led by Myles Turner, who has the highest number of Blocks per game among all players.
+
+```{r}
+
+# bottom n
+
+p10.2 <- player_stats%>%filter( G >= 40)%>%group_by(player_name)%>% summarise(BLK = mean(BLK/G))%>%arrange(-BLK)%>%tail(n)%>%
+            ggplot(aes(reorder(player_name, BLK), BLK, fill = BLK)) + geom_bar(stat="identity") +
+            labs( x = 'player name',y = 'Blocks per game', title = 'Bottom 20 players based on Blocks per game') +
+            theme(plot.title = element_text(size = 10),legend.position = "none") +
+            scale_fill_gradient(low = '#CC0000', high= '#FFCCCC') +
+            geom_text(aes(player_name, BLK,label = round(BLK,2) ), size = 3, color = 'black', hjust = -0.1) +
+            coord_flip()
+
+p10.2
+
+```
+Based on the above graph Bojan Bogdanovic performed the lowest based on steals per game.
+
+## Player analysis based on positions:
+
+### PG ( Point Guard)
+
+The point guard (PG) is typically the team's primary ball-handler, responsible for bringing the ball up the court and initiating the team's offensive plays. They are usually the shortest players on the court, but also one of the fastest and most agile. 
+
+
+Top 10 point guard players based on points:
+
+We first filter the Point guards players in the data and then make the plot.
+
+```{r}
+
+PG_df <-  player_stats%>%filter(Pos == 'PG')%>%group_by(player_name)%>%summarise(PTS = mean(PTS/G))%>% arrange(-PTS)%>%head(10)
+
+PG_df
+
+```
+
+```{r}
+
+PG_df%>%ggplot(aes(reorder(player_name, PTS), PTS, fill = PTS)) + geom_bar(stat="identity") +
+            labs( x = 'player name',y = 'Points per game', title = 'Top 10 Point Guard players based on points per game') + theme(plot.title = element_text(size = 10),legend.position = "none") +
+            geom_text(aes(player_name, PTS,label = round(PTS,2) ), size = 3, color = 'black', hjust = 0) +
+            coord_flip()
+
+```
+
+
+Top 10 point guard players based on assist to turnover ratio:
+
+We first filter out those players who play at point guard positions with an Assist of more than 7 and who have played more than 40 games. We then calculate the Assist to turnover ratio for them in order to rank them.
+
+```{r}
+
+# top 10 PG players with highest assist to turnover ratio
+PG_df2 <- player_stats %>%filter(Pos == 'PG' & AST > 7.1 & G >= 40)%>%group_by(player_name)%>%summarise(AST_TOV = AST / TOV)%>% arrange(-AST_TOV)%>%head(10)
+
+
+PG_df2
+```
+
+
+```{r}
+
+PG_df2%>% ggplot(aes(reorder(player_name,AST_TOV), AST_TOV, fill = AST_TOV)) + geom_bar(stat="identity") +
+      labs( x = 'player name',y = 'Assist to Turnover ratio', title = 'Top 10 Point Guard players based on assist to turnover ratio') + theme(plot.title = element_text(size = 10),legend.position = "none") +
+      geom_text(aes(player_name, AST_TOV,label = round(AST_TOV,2) ), size = 3, color = 'black', hjust = -0.1) +
+      coord_flip()
+
+```
+### SG (Shooting Guard)
+
+The shooting guard (SG) is responsible for scoring points and is often the team's best outside shooter. They are typically taller than the point guard but not as tall as the small forward.
+
+
+Top 10 Shooting Guard players based on points:
+
+We first filter the Shooting guards players in the data and then make the plot.
+
+```{r}
+
+SG_df <- player_stats%>%filter(Pos == 'SG')%>%group_by(player_name)%>%summarise(X3P. = mean(X3P.), X2P. = mean(X2P.), FT. = mean(FT.), G = sum(G), PTS = mean(PTS/G))
+  
+SG_df2 <- SG_df%>%filter(X3P. > mean(SG_df$X3P.), X2P. > mean(SG_df$X2P.), FT. > mean(SG_df$FT.), G >= 40 )%>% arrange(-PTS)%>%head(10)
+
+SG_df2
+
+```
+
+```{r}
+
+SG_df2%>%ggplot(aes(reorder(player_name, PTS),PTS, fill = PTS)) + geom_bar(stat="identity") +
+            labs( x = 'player name',y = 'Points per game', title = 'Top 10 Shooting Guard players based on points per game who have above average 3 and 2 point goal attempts and free throws') +
+            geom_text(aes(player_name, PTS,label = round(PTS,2) ), size = 3, color = 'black', hjust = -0.1) +   theme(plot.title = element_text(size = 7.1), legend.position = "none") +
+            coord_flip()
+
+
+```
+
+
+
+### PF (Power Forward)
+
+The power forward (PF) is usually the team's best rebounder and inside scorer. They are typically taller and stronger than the small forward, but not as tall as the center.
+
+Top 10 power forward players based on points:
+
+We first filter the power forward players in the data and then make the plot.
+
+```{r}
+
+PF_df <- player_stats%>%filter(Pos == 'PF')%>%group_by(player_name)%>%summarise(PTS = mean(PTS/G), TRB = mean(TRB), BLK = mean(BLK), G = sum(G))
+
+PF_df2 <- PF_df%>%filter(TRB > mean(PF_df$TRB), BLK > mean(PF_df$BLK), PTS > mean(PF_df$PTS) , G >= 40)%>% arrange(-PTS)%>% head(10)
+
+PF_df2
+
+```
+
+
+```{r}
+
+PF_df2%>% ggplot(aes(reorder(player_name,PTS), PTS, fill = PTS)) + geom_bar(stat="identity")+
+            labs( x = 'player name', y = 'Points per game', title = 'Top 10 Power forward players based on points per game') + geom_text(aes(player_name, PTS,label = round(PTS,2) ), size = 3, color = 'black', hjust = 0) + 
+  theme(plot.title = element_text(size = 10),legend.position = "none") +
+            coord_flip()
+
+```
+
+### C (Center)
+
+Finally, the center (C) is usually the tallest player on the team and is responsible for playing close to the basket on both offense and defense. Their main responsibilities include rebounding, blocking shots, and scoring close to the basket. The center is often considered the anchor of the team's defense, and their size and strength make them a dominant presence on the court.
+
+Top 10 center players based on points:
+
+We first filter the Center forward players in the data and then make the plots.
+
+```{r}
+
+C_df <- player_stats%>%filter(Pos == 'C')%>%group_by(player_name)%>%summarise(PTS = mean(PTS/G), TRB = mean(TRB), BLK = mean(BLK), G = sum(G))
+
+C_df2 <- C_df%>%filter(TRB > mean(PF_df$TRB), BLK > mean(PF_df$BLK), PTS > mean(PF_df$PTS) , G >= 40)%>%arrange(-PTS)%>% head(10)
+
+C_df2
+
+```
+
+
+```{r}
+
+C_df2%>% ggplot(aes(reorder(player_name,PTS), PTS, fill = PTS)) + geom_bar(stat="identity") +labs(x = 'player name', y = 'Points per game', title = 'Top 10 Center players based on points per game who have more than average TRB and BLK') +geom_text(aes(player_name, PTS,label = round(PTS,2) ), size = 3, color = 'black', hjust = 0) +
+  theme(plot.title = element_text(size = 10),legend.position = "none") +
+  coord_flip()
+
+```
+
+
+### SF (Small Forward)
+
+The small forward (SF) is a versatile player who can play both inside and outside. They are typically taller than the shooting guard and often have a combination of speed and strength. 
+
+
+Top 10 small forward players based on points:
+
+We first filter the small forward players in the data and then make the plots. 
+
+```{r}
+
+SF_df <- player_stats%>%filter(Pos == 'SF')%>%group_by(player_name)%>%summarise(PTS = mean(PTS/G), G = sum(G), TRB = mean(TRB), AST = mean(AST), BLK = mean(BLK), STL = mean(STL))
+
+
+SF_df2 <- SF_df%>%
+  filter(TRB > mean(SF_df$TRB), AST > mean(SF_df$AST), STL > mean(SF_df$STL), BLK > mean(SF_df$BLK), PTS > mean(SF_df$PTS) , G > 40)%>%arrange(-PTS)%>% head(10)
+
+SF_df2
+
+```
+
+
+```{r}
+
+SF_df2%>% ggplot(aes(reorder(player_name,PTS), PTS, fill = PTS)) + geom_bar(stat="identity") +
+            labs( x = 'player name', y = 'Points per game', title = 'Top 10 Small forward players based on points per game who have above average AST, TRB, STL, BLK') +
+            geom_text(aes(player_name, PTS,label = round(PTS,2) ), size = 3, color = 'black', hjust = 0) +
+  theme(plot.title = element_text(size = 8.6),legend.position = "none") +
+            coord_flip()
+```
+
+### Top 10 highest paid players
+
+We will find the top 10 highest paid players among all the players.
+
+For this we will join the player_salary dataframe with the player_stats dataframe and then group the resulting dataframe by player name and take average of all numerical columns/features.
+
+```{r}
+
+# reformat the salary column
+player_salary['salary'] <- player_salary$salary / 10^6
+
+
+# Join the two data frames ( player_stats and player_salary) by the "player_name" column
+merged_df <- merge(player_stats, player_salary, by = "player_name", all = TRUE)
+
+
+merged_df%>%arrange(-salary)%>%head(10)%>%ggplot(aes(reorder(player_name, salary), salary, fill = salary)) + geom_bar(stat="identity") +labs(x = 'player name', y = 'Salary (mn USD)', title = 'Top 10 highest paid players') + geom_text(aes(player_name, salary,label = salary ), size = 3, color = 'black', hjust = 0) + theme(plot.title = element_text(size = 10),legend.position = "none") + coord_flip()
+
+
+```
+
+### Position wise player salaries
+
+## Point guards
+
+We will look at the salaries of the top 10 point guards based on assist to turnover ratio from the analysis we performed above.
+
+```{r}
+
+df1 <- merged_df%>% filter(player_name %in% PG_df2$player_name)%>%select(c('player_name', 'Age', 'salary' ))
+df2 <- merge(PG_df2, df1, by = 'player_name', all = TRUE)
+df2
+
+```
+
+
+
+```{r}
+
+merged_df%>% filter(player_name %in% PG_df2$player_name)%>%ggplot(aes(reorder(player_name, salary), salary, fill = salary)) + geom_bar(stat="identity") +labs(x = 'player name', y = 'Salary (mn USD)', title = 'Salaries of top 10 Point guard players') + geom_text(aes(player_name, salary,label = salary ), size = 3, color = 'black', hjust = 0) + theme(plot.title = element_text(size = 10),legend.position = "none") + coord_flip()
+
+```
+
+
+## Shooting guards
+
+We will look at the salaries of the top 10 shooting guards based on above avg performance from the analysis we did above.
+
+```{r}
+
+df1 <- merged_df%>% filter(player_name %in% SG_df2$player_name)%>%select(c('player_name', 'Age', 'salary' ))
+df2 <- merge(SG_df2, df1, by = 'player_name', all = TRUE)
+df2
+
+```
+
+
+
+```{r}
+
+merged_df%>% filter(player_name %in% SG_df2$player_name)%>%ggplot(aes(reorder(player_name, salary), salary, fill = salary)) + geom_bar(stat="identity") +labs(x = 'player name', y = 'Salary (mn USD)', title = 'Salaries of top 10 Shooting guard players') + geom_text(aes(player_name, salary,label = salary ), size = 3, color = 'black', hjust = 0) + theme(plot.title = element_text(size = 10),legend.position = "none") + coord_flip()
+
+```
+## Power Forward
+
+We will look at the salaries of the top 10 power forward players based on above average performance from the analysis we did above.
+
+```{r}
+
+df1 <- merged_df%>% filter(player_name %in% PF_df2$player_name)%>%select(c('player_name', 'Age', 'salary' ))%>%group_by_at(vars(player_name))%>%summarise(across(everything(), mean))
+df2 <- merge(PF_df2, df1, by = 'player_name', all = TRUE)
+df2
+
+```
+
+
+```{r}
+
+merged_df%>% filter(player_name %in% PF_df2$player_name)%>% group_by_at(vars(player_name))%>% summarise(across(everything(), mean))%>%ggplot(aes(reorder(player_name, salary), salary, fill = salary)) + geom_bar(stat="identity") +labs( x = 'player name', y = 'Salary (mn USD)', title = 'Salaries of top 10 Power Forward players') + geom_text(aes(player_name, salary,label = salary ), size = 3, color = 'black', hjust = 0) + theme(plot.title = element_text(size = 10),legend.position = "none") + coord_flip()
+
+```
+
+## Small Forward
+
+We will look at the salaries of the top 10 small forward players based on above average performance from the analysis we did above.
+
+```{r}
+
+df1 <- merged_df%>% filter(player_name %in% SF_df2$player_name)%>%select(c('player_name', 'Age', 'salary' ))%>%group_by_at(vars(player_name))%>%summarise(across(everything(), mean))
+df2 <- merge(SF_df2, df1, by = 'player_name', all = TRUE)
+df2
+
+```
+
+
+```{r}
+
+merged_df%>% filter(player_name %in% SF_df2$player_name)%>% group_by_at(vars(player_name))%>% summarise(across(everything(), mean))%>%ggplot(aes(reorder(player_name, salary), salary, fill = salary)) + geom_bar(stat="identity") +labs( x = 'player name',y = 'Salary (mn USD)', title = 'Salaries of top 10 Small Forward players') + geom_text(aes(player_name, salary,label = salary ), size = 3, color = 'black', hjust = 0) + theme(plot.title = element_text(size = 10),legend.position = "none") + coord_flip()
+
+```
+
+## Center
+
+We will look at the salaries of the top 10 center players based on above average performance from the analysis we did above.
+
+```{r}
+
+df1 <- merged_df%>% filter(player_name %in% C_df2$player_name)%>%select(c('player_name', 'Age', 'salary' ))
+df2 <- merge(C_df2, df1, by = 'player_name', all = TRUE)
+df2
+
+```
+
+
+```{r}
+
+merged_df%>% filter(player_name %in% C_df2$player_name)%>%ggplot(aes(reorder(player_name, salary), salary, fill = salary)) + geom_bar(stat="identity") +labs(x = 'player name', y = 'Salary (mn USD)', title = 'Top 10 highest paid Center players') + geom_text(aes(player_name, salary,label = salary ), size = 3, color = 'black', hjust = 0) + theme(plot.title = element_text(size = 10),legend.position = "none") + coord_flip()
+
+```
+
+# Players in Chicago Bulls
+
+We will now find all the players in the Chicago bulls team.
+
+```{r}
+
+# Join the two data frames ( player_stats and player_salary) by the "player_name" column
+CHI_df <- merged_df%>%filter(Tm == 'CHI')%>%select(player_name, Age, Pos, salary)
+CHI_df
+
+```
+
+
+And now we will plot the salaries of all these players in the year 2018-19.
+
+```{r}
+
+CHI_df%>%arrange(-salary)%>%ggplot(aes(reorder(player_name, salary), salary, fill = salary)) + geom_bar(stat="identity") +labs( x = 'player name', y = 'Salary (mn USD)', title = 'Salaries of Chicago Bull players 2018-19') + geom_text(aes(player_name, salary,label = salary ), size = 3, color = 'black', hjust = 0) + theme(plot.title = element_text(size = 10),legend.position = "none") + coord_flip()
+
+```
+
+```{r}
+
+cat("Chicago Bulls paid :", sum(CHI_df$salary, na.rm = TRUE), 'mn USD for the team in 2018-19')
+
+```
+```{r}
+
+team_payroll%>%filter(..team_id == 24)
+
+```
+
+We observe that the team payroll of Chicago bulls for the year 2018-19 was approx $112 mn it seems that they overspent on players based on above findings.
+
+Chicago Bulls budget for player contracts next season is $118 million, which is approx 2 millions less than before.
+
+In the National Basketball Association (NBA), each team can have up to 15 players on its roster, which is known as the "active roster." However, teams are also allowed to have up to two additional players on their "inactive roster," bringing the total number of players on a team's full roster to 17. The inactive players are typically reserves who are not currently needed to play, but can be activated in case of injury or other circumstances.
+
+Based on this info on average we can spend approx 7 mn USD on each player. But its not necessary to keep all the players within this budget, we can make adjustments to rope in some better players in each position.
+
+Five best starting players that the team can afford, one from each position:
+
+- PG : Either Tyus JOnes (age: 22, salary: $2.4 mn) or Monte Morris (age: 23, salary: $1.3 mn)
+- SG : Malcolm Brogdon (age 26, salary: $1.5 mn)
+- PF : Julius Randle (age: 24, salary: $8.6 mn)
+- SF : Jayson Tatum (age: 20, salary: $6.7 mn)
+-  C : Karl-Anthony Towns (age: 23, salary: $7.8 mn)
+
+
+# 4. Data Modelling:
+
+In this section we will create a linear regression model that would predict points per game scored by a player based on his stats.
+
+We will group the player_stats dataframe by player_name and use the  average values of the following columns as features: 'Age','G','MP','X3P.','X2P.','eFG.','FT.','TRB','AST','STL','BLK','TOV','PF','PTS'
+
+We have not selected some of the columns as they are inherent in the columns present above for example:
+X3P. <- X3P/X3PA
+X2P. <- X2P/X2PA
+and so on.
+
+It is done in order to avoid multi-colinearity in the features.
+
+
+```{r}
+# we extract the relevant columsn and average the dataset by player name and convert the points to points per game.
+data = player_stats[,c('player_name','Age','G','MP','X3P.','X2P.','eFG.','FT.','TRB','AST','STL','BLK','TOV','PF','PTS')]%>%group_by_at(vars(player_name))%>%summarise(across(everything(), mean), PTS = round((PTS/G)))
+
+# dropping player names
+data[,c(1)] <- NULL
+
+```
+
+We will now perform feature selection. We will try to methods and compare them.
+
+## Feature selection approach 1: Correlation 
+
+We will make use of Correlation plot for feature selection. We will keep only one of the two highly correlated features, if any.
+
+```{r}
+
+# Compute the correlation matrix
+cor_mat <- cor(data)
+
+# Melt the correlation matrix into long format
+cor_melted <- melt(cor_mat)
+
+# Create the heatmap using ggplot2
+ggplot(cor_melted, aes(x=Var1, y=Var2, fill=value)) +
+  geom_tile() +
+  scale_fill_gradient2(low="blue", mid="white", high="red", midpoint=0) +
+  geom_text(aes(label=round(value,2)), color="black", size=3) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x="", y="", fill="Correlation") +
+  ggtitle("Correlation Heatmap")
+
+```
+
+From the above heatmap for correlation we observe that there is a :
+- high positive correlation between G and MP (0.9)
+- high positive correlation of G and MP with TRB (0.72, 0.8), AST(0.62, 0.78), STL(0.75, 0.87), TOV(0.7, 0.86), PF (0.88, 0.9), PTS(0.75, 0.92)
+- high positive correlation of TRB with STL(0.7), BLK(0.79), TOV(0.74), PF (0.84), PTS(0.77)
+- high positive correlation of AST with STL(0.8), TOV(0.9), PTS(0.8)
+- high positive correlation of TOV with PF(0.78) and PTS(0.92)
+
+So we will drop both G, MP, STL, BLK, TOV and PF from the data and train the model.
+
+```{r}
+
+data2 = data
+
+data2[,c('G','MP','STL', 'BLK', 'TOV', 'PF' )] <- NULL
+
+## scale the features, not scaling the target (PTS)
+data_scaled <- as.data.frame(scale(data2[,c(1:7)]))
+data_scaled['PTS'] <- data2$PTS
+
+
+## train test split
+set.seed(123)
+
+# Split the data into a training set (80%) and a testing set (20%)
+split = sample(nrow(data_scaled), floor(0.8*nrow(data_scaled)), replace = FALSE)
+
+# Create the training set
+train = data_scaled[split, ]
+
+# Create the testing set
+test = data_scaled[-split, ]
+
+# train model on train data
+model <- lm(PTS ~ ., data = train)
+
+# prediction
+y_pred <- predict(model, newdata = test)
+
+# Calculate the R-squared value
+r2 <- summary(model)$r.squared
+
+# Calculate the Root Mean Squared Error
+rmse <- sqrt(mean((y_pred - test$PTS)^2))
+
+cat("R-squared:", r2, "\n")
+cat("Root Mean Squared Error:", rmse, "\n")
+
+```
+
+
+## Feature selection approach 2: PCA
+
+We will perform PCA to reduce the dimensions of the data.
+
+```{r}
+
+# Perform PCA on the dataset
+pca_result <- prcomp(data, scale. = TRUE)
+
+# Extract the variance explained by each principal component
+var_explained <- pca_result$sdev^2 / sum(pca_result$sdev^2)
+
+# Calculate the cumulative variance explained by each component
+cumulative_var <- cumsum(var_explained)
+
+# Create a data frame with the variance and cumulative variance explained
+var_df <- data.frame(PCA_Component = paste0("PC", 1:length(var_explained)), 
+                     Variance_Explained = var_explained, 
+                     Cumulative_Variance = cumulative_var)
+
+# Reorder PCA_Component factor according to Cumulative_Variance
+var_df <- var_df %>% 
+  mutate(PCA_Component = factor(PCA_Component, levels = PCA_Component[order(Cumulative_Variance)]))
+
+# Plot the cumulative variance explained by the principal components
+ggplot(var_df, aes(x = PCA_Component, y = Cumulative_Variance)) + 
+  geom_col(fill = "blue") + 
+  geom_line(aes(y = Cumulative_Variance, group = 1), color = "red") + 
+  scale_y_continuous(labels = scales::percent) + 
+  labs(x = "Principal Component", y = "Cumulative Variance Explained", 
+       title = "Cumulative Variance Explained by Principal Components")
+
+
+```
+
+
+
+
+```{r}
+
+# Select only those components that explain up to 95% of the variance
+n_components <- sum(cumulative_var <= 0.95)
+
+# Create a new data frame with the selected components
+pca_data <- data.frame(pca_result$x[,1:n_components])
+
+pca_data['PTS'] <- data$PTS
+
+## train test split
+set.seed(123)
+
+# Split the data into a training set (80%) and a testing set (20%)
+split = sample(nrow(pca_data), floor(0.8*nrow(pca_data)), replace = FALSE)
+
+# Create the training set
+train = pca_data[split, ]
+
+# Create the testing set
+test = pca_data[-split, ]
+
+# train model on train data
+model2 <- lm(PTS ~ ., data = train)
+
+# prediction
+y_pred2 <- predict(model2, newdata = test)
+
+# Calculate the R-squared value
+r2_2 <- summary(model2)$r.squared
+
+# Calculate the Root Mean Squared Error
+rmse2 <- sqrt(mean((y_pred2 - test$PTS)^2))
+
+cat("R-squared:", r2_2, "\n")
+cat("Root Mean Squared Error:", rmse2, "\n")
+
+```
+Based on the r-squared and rmse values, PCA model performed better at predicting points per game of players given their statistics.
+
+
+
+
+
+
