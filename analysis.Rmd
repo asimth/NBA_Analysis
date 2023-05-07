@@ -36,11 +36,11 @@ Read the data:
 
 ```{r}
 # load data
-player_salary <- read.csv('C:/Users/HP/Desktop/sports/2018-19_nba_player-salaries.csv')   # player salary data
-player_stats <- read.csv('C:/Users/HP/Desktop/sports/2018-19_nba_player-statistics.csv')  # player statistics data
-team_stats_1 <- read.csv('C:/Users/HP/Desktop/sports/2018-19_nba_team-statistics_1.csv') # team statistics data 1
-team_stats_2 <- read.csv('C:/Users/HP/Desktop/sports/2018-19_nba_team-statistics_2.csv') # team statistics data 2
-team_payroll <- read.csv('C:/Users/HP/Desktop/sports2019-20_nba_team-payroll.csv') # team payroll data
+player_salary <- read.csv('2018-19_nba_player-salaries.csv')   # player salary data
+player_stats <- read.csv('2018-19_nba_player-statistics.csv')  # player statistics data
+team_stats_1 <- read.csv('2018-19_nba_team-statistics_1.csv') # team statistics data 1
+team_stats_2 <- read.csv('2018-19_nba_team-statistics_2.csv') # team statistics data 2
+team_payroll <- read.csv('2019-20_nba_team-payroll.csv') # team payroll data
 
 ```
 
